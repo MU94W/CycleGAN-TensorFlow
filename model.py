@@ -69,16 +69,16 @@ class CycleGAN:
     x = X_reader.feed()
     y = Y_reader.feed()
 
-    cycle_loss = self.cycle_consistency_loss(self.G, self.F, x, y)
+    fake_y = self.G(x)
+    fake_x = self.F(y)
+    cycle_loss = self.cycle_consistency_loss(self.G, self.F, x, y, fake_y, fake_x)
 
     # X -> Y
-    fake_y = self.G(x)
     G_gan_loss = self.generator_loss(self.D_Y, fake_y, use_lsgan=self.use_lsgan)
     G_loss =  G_gan_loss + cycle_loss
     D_Y_loss = self.discriminator_loss(self.D_Y, y, self.fake_y, use_lsgan=self.use_lsgan)
 
     # Y -> X
-    fake_x = self.F(y)
     F_gan_loss = self.generator_loss(self.D_X, fake_x, use_lsgan=self.use_lsgan)
     F_loss = F_gan_loss + cycle_loss
     D_X_loss = self.discriminator_loss(self.D_X, x, self.fake_x, use_lsgan=self.use_lsgan)
@@ -171,10 +171,10 @@ class CycleGAN:
       loss = -tf.reduce_mean(ops.safe_log(D(fake_y))) / 2
     return loss
 
-  def cycle_consistency_loss(self, G, F, x, y):
+  def cycle_consistency_loss(self, G, F, x, y, fake_y, fake_x):
     """ cycle consistency loss (L1 norm)
     """
-    forward_loss = tf.reduce_mean(tf.abs(F(G(x))-x))
-    backward_loss = tf.reduce_mean(tf.abs(G(F(y))-y))
+    forward_loss = tf.reduce_mean(tf.abs(F(fake_y)-x))
+    backward_loss = tf.reduce_mean(tf.abs(G(fake_x)-y))
     loss = self.lambda1*forward_loss + self.lambda2*backward_loss
     return loss
